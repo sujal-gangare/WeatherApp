@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5; /* Light gray background */
+        }
+        /* Custom modal for alerts */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #fff;
+            margin: auto;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            text-align: center;
+            animation: fadeIn 0.3s ease-out;
+        }
+        .modal-header {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #333;
+        }
+        .modal-body {
+            margin-bottom: 24px;
+            color: #555;
+            line-height: 1.5;
+        }
+        .modal-footer button {
+            background-color: #2563eb; /* Blue button */
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .modal-footer button:hover {
+            background-color: #1d4ed8; /* Darker blue on hover */
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4 sm:p-6">
+
+    <div class="weather-container bg-white p-6 sm:p-8 rounded-xl shadow-lg w-full max-w-md">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Weather Forecast</h1>
+
+        <!-- Location Input Section -->
+        <div class="flex flex-col sm:flex-row gap-4 mb-6">
+            <input
+                type="text"
+                id="cityInput"
+                placeholder="Enter city name or postal code"
+                class="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+            >
+            <button
+                id="searchButton"
+                class="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition duration-200 shadow-md flex-shrink-0"
+            >
+                Search
+            </button>
+        </div>
+
+        <!-- Current Location Button -->
+        <div class="mb-4 text-center">
+            <button
+                id="currentLocationButton"
+                class="bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition duration-200 shadow-md w-full"
+            >
+                Use My Current Location
+            </button>
+        </div>
+
+        <!-- Toggle Units Button -->
+        <div class="mb-6 text-center">
+            <button
+                id="toggleUnitsButton"
+                class="bg-purple-600 text-white p-3 rounded-lg hover:bg-purple-700 transition duration-200 shadow-md w-full"
+            >
+                Switch to Fahrenheit
+            </button>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loadingIndicator" class="hidden text-center text-gray-500 mb-6">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-t-4 border-blue-500 border-gray-200"></div>
+            <p class="mt-2">Fetching weather data...</p>
+        </div>
+
+        <!-- Weather Display Section -->
+        <div id="weatherDisplay" class="hidden text-center">
+            <h2 id="locationName" class="text-2xl font-semibold text-gray-700 mb-2"></h2>
+            <div class="flex items-center justify-center mb-1">
+                <img id="weatherIcon" src="https://placehold.co/60x60/cccccc/ffffff?text=Icon" alt="Weather Icon" class="w-16 h-16 mr-2 rounded-full">
+                <p id="temperature" class="text-5xl font-bold text-gray-900"></p>
+                <span id="unitSymbol" class="text-3xl text-gray-600 ml-1">&deg;C</span>
+            </div>
+            <p id="feelsLike" class="text-lg text-gray-600 mb-4"></p>
+            <p id="description" class="text-xl text-gray-600 mb-4 capitalize"></p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+                <div class="bg-blue-50 p-4 rounded-lg flex items-center shadow-sm">
+                    <svg class="w-6 h-6 text-blue-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7a9 9 0 00-18 0h18zm-1 0l-4 4-4-4"></path></svg>
+                    <p class="text-gray-700"><span class="font-medium">Humidity:</span> <span id="humidity"></span>%</p>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-lg flex items-center shadow-sm">
+                    <svg class="w-6 h-6 text-blue-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    <p class="text-gray-700"><span class="font-medium">Wind Speed:</span> <span id="windSpeed"></span> m/s</p>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-lg flex items-center shadow-sm">
+                    <svg class="w-6 h-6 text-blue-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    <p class="text-gray-700"><span class="font-medium">Pressure:</span> <span id="pressure"></span> hPa</p>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-lg flex items-center shadow-sm">
+                    <svg class="w-6 h-6 text-blue-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h1M3 12H2M18.364 5.636l-.707-.707M6.343 17.657l-.707.707M17.657 6.343l.707-.707M6.343 6.343l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                    <p class="text-gray-700"><span class="font-medium">Visibility:</span> <span id="visibility"></span> km</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Message -->
+        <div id="errorMessage" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mt-6" role="alert">
+            <strong class="font-bold">Error!</strong>
+            <span class="block sm:inline" id="errorText"></span>
+        </div>
+    </div>
+
+    <!-- Custom Modal Structure -->
+    <div id="customModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header" id="modalHeader"></div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-footer">
+                <button id="modalCloseButton">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API key would go here in a real application, e.g., const API_KEY = "YOUR_API_KEY";
+        // For this example, we are simulating the API response.
+
+        const cityInput = document.getElementById('cityInput');
+        const searchButton = document.getElementById('searchButton');
+        const currentLocationButton = document.getElementById('currentLocationButton');
+        const toggleUnitsButton = document.getElementById('toggleUnitsButton');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const weatherDisplay = document.getElementById('weatherDisplay');
+        const locationName = document.getElementById('locationName');
+        const temperature = document.getElementById('temperature');
+        const feelsLike = document.getElementById('feelsLike');
+        const description = document.getElementById('description');
+        const humidity = document.getElementById('humidity');
+        const windSpeed = document.getElementById('windSpeed');
+        const pressure = document.getElementById('pressure');
+        const visibility = document.getElementById('visibility');
+        const weatherIcon = document.getElementById('weatherIcon');
+        const unitSymbol = document.getElementById('unitSymbol');
+        const errorMessage = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
+
+        // Custom modal elements
+        const customModal = document.getElementById('customModal');
+        const modalHeader = document.getElementById('modalHeader');
+        const modalBody = document.getElementById('modalBody');
+        const modalCloseButton = document.getElementById('modalCloseButton');
+
+        let isCelsius = true; // State to track current unit
+        let currentWeatherData = null; // Store the fetched raw data
+
+        /**
+         * Displays a custom modal with a given header and body.
+         * @param {string} headerText - The text for the modal header.
+         * @param {string} bodyText - The text for the modal body.
+         */
+        function showCustomModal(headerText, bodyText) {
+            modalHeader.textContent = headerText;
+            modalBody.textContent = bodyText;
+            customModal.style.display = 'flex'; // Show the modal
+        }
+
+        // Event listener to close the custom modal
+        modalCloseButton.addEventListener('click', () => {
+            customModal.style.display = 'none'; // Hide the modal
+        });
+
+        /**
+         * Displays an error message on the page.
+         * @param {string} message - The error message to display.
+         */
+        function displayError(message) {
+            loadingIndicator.classList.add('hidden');
+            weatherDisplay.classList.add('hidden');
+            errorMessage.classList.remove('hidden');
+            errorText.textContent = message;
+        }
+
+        /**
+         * Hides the error message.
+         */
+        function hideError() {
+            errorMessage.classList.add('hidden');
+            errorText.textContent = '';
+        }
+
+        /**
+         * Converts Celsius to Fahrenheit.
+         * @param {number} celsius - Temperature in Celsius.
+         * @returns {number} Temperature in Fahrenheit.
+         */
+        function celsiusToFahrenheit(celsius) {
+            return (celsius * 9 / 5) + 32;
+        }
+
+        /**
+         * Gets a safe value from data, or a default string if undefined/null.
+         * @param {any} value - The value to check.
+         * @param {string} defaultValue - The default string to return if value is undefined/null.
+         * @returns {string} The value converted to string, or the default value.
+         */
+        function getSafeValue(value, defaultValue = '---') {
+            return value !== undefined && value !== null ? String(value) : defaultValue;
+        }
+
+        /**
+         * Updates the UI with weather data based on current unit preference.
+         */
+        function displayWeatherInCurrentUnits() {
+            if (!currentWeatherData) return; // Do nothing if no data is loaded
+
+            const data = currentWeatherData;
+            // Use optional chaining and default values for robustness
+            const tempCelsius = data.main?.temp;
+            const feelsCelsius = data.main?.feels_like;
+            const weatherDesc = data.weather?.[0]?.description;
+            const weatherIconCode = data.weather?.[0]?.icon;
+            const weatherMain = data.weather?.[0]?.main;
+
+            const temp = isCelsius ? tempCelsius : celsiusToFahrenheit(tempCelsius);
+            const feels = isCelsius ? feelsCelsius : celsiusToFahrenheit(feelsCelsius);
+            const unit = isCelsius ? '&deg;C' : '&deg;F';
+            const buttonText = isCelsius ? 'Switch to Fahrenheit' : 'Switch to Celsius';
+
+
+            locationName.textContent = `${getSafeValue(data.name)}, ${getSafeValue(data.sys?.country)}`;
+            temperature.textContent = getSafeValue(Math.round(temp));
+            // Corrected: Use innerHTML to render the degree symbol correctly
+            feelsLike.innerHTML = `Feels like: ${getSafeValue(Math.round(feels))}${unit}`;
+            description.textContent = getSafeValue(weatherDesc).replace(/\b\w/g, char => char.toUpperCase()); // Capitalize first letter of each word
+            humidity.textContent = getSafeValue(data.main?.humidity);
+            windSpeed.textContent = getSafeValue(data.wind?.speed);
+            pressure.textContent = getSafeValue(data.main?.pressure);
+            visibility.textContent = getSafeValue((data.visibility / 1000).toFixed(1)); // Convert meters to km
+
+            unitSymbol.innerHTML = unit; // Use innerHTML to render degree symbol
+            toggleUnitsButton.textContent = buttonText;
+
+            // Set weather icon (using placeholder for now, replace with actual icon logic later)
+            if (weatherIconCode) {
+                weatherIcon.src = `https://openweathermap.org/img/wn/${weatherIconCode}@2x.png`;
+                weatherIcon.alt = getSafeValue(weatherMain);
+            } else {
+                weatherIcon.src = 'https://placehold.co/60x60/cccccc/ffffff?text=Icon'; // Fallback to a generic icon placeholder
+                weatherIcon.alt = 'Weather Icon';
+            }
+            weatherIcon.onerror = function() {
+                this.src = 'https://placehold.co/60x60/cccccc/ffffff?text=Icon'; // Fallback to a generic icon placeholder
+            };
+        }
+
+
+        /**
+         * Updates the UI with weather data after a fresh fetch.
+         * Stores the raw data and then calls display function.
+         * @param {object} data - The weather data object.
+         */
+        function updateWeatherUI(data) {
+            hideError();
+            loadingIndicator.classList.add('hidden');
+            weatherDisplay.classList.remove('hidden');
+
+            currentWeatherData = data; // Store the raw data
+            displayWeatherInCurrentUnits(); // Display it in the current units
+        }
+
+        /**
+         * Simulates fetching weather data.
+         * In a real application, you would replace this with a fetch call to a weather API.
+         * @param {string} query - The city name or latitude,longitude.
+         * @param {string} type - 'city' or 'coords'.
+         * @returns {Promise<object>} A promise that resolves with simulated weather data.
+         */
+        async function fetchWeatherData(query, type) {
+            loadingIndicator.classList.remove('hidden');
+            weatherDisplay.classList.add('hidden');
+            hideError();
+
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    let simulatedData;
+                    // Simulate different responses based on query or type
+                    const lowerCaseQuery = query.toLowerCase();
+
+                    if (type === 'city') {
+                        if (lowerCaseQuery.includes('london')) {
+                            simulatedData = {
+                                "coord": { "lon": -0.1278, "lat": 51.5074 },
+                                "weather": [{ "id": 801, "main": "Clouds", "description": "few clouds", "icon": "02d" }],
+                                "base": "stations",
+                                "main": { "temp": 18.5, "feels_like": 18.2, "temp_min": 17, "temp_max": 20, "pressure": 1012, "humidity": 75 },
+                                "visibility": 10000,
+                                "wind": { "speed": 4.1, "deg": 240 },
+                                "clouds": { "all": 20 },
+                                "dt": 1678886400,
+                                "sys": { "type": 2, "id": 2075535, "country": "GB", "sunrise": 1678857600, "sunset": 1678899600 },
+                                "timezone": 0,
+                                "id": 2643743,
+                                "name": "London",
+                                "cod": 200
+                            };
+                        } else if (lowerCaseQuery.includes('new york')) {
+                            simulatedData = {
+                                "coord": { "lon": -74.006, "lat": 40.7128 },
+                                "weather": [{ "id": 800, "main": "Clear", "description": "clear sky", "icon": "01d" }],
+                                "base": "stations",
+                                "main": { "temp": 25.0, "feels_like": 24.5, "temp_min": 23, "temp_max": 27, "pressure": 1015, "humidity": 60 },
+                                "visibility": 10000,
+                                "wind": { "speed": 3.6, "deg": 200 },
+                                "clouds": { "all": 0 },
+                                "dt": 1678886400,
+                                "sys": { "type": 2, "id": 2039014, "country": "US", "sunrise": 1678857000, "sunset": 1678898000 },
+                                "timezone": -14400,
+                                "id": 5128581,
+                                "name": "New York",
+                                "cod": 200
+                            };
+                        } else if (lowerCaseQuery.includes('tokyo')) {
+                            simulatedData = {
+                                "coord": { "lon": 139.6917, "lat": 35.6895 },
+                                "weather": [{ "id": 501, "main": "Rain", "description": "moderate rain", "icon": "10d" }],
+                                "base": "stations",
+                                "main": { "temp": 22.0, "feels_like": 21.0, "temp_min": 20, "temp_max": 23, "pressure": 1008, "humidity": 85 },
+                                "visibility": 8000,
+                                "wind": { "speed": 5.0, "deg": 90 },
+                                "clouds": { "all": 75 },
+                                "dt": 1678886400,
+                                "sys": { "type": 2, "id": 2011030, "country": "JP", "sunrise": 1678857000, "sunset": 1678898000 },
+                                "timezone": 32400,
+                                "id": 1850147,
+                                "name": "Tokyo",
+                                "cod": 200
+                            };
+                        } else if (lowerCaseQuery.includes('mumbai')) {
+                            simulatedData = {
+                                "coord": { "lon": 72.8777, "lat": 19.076 },
+                                "weather": [{ "id": 802, "main": "Clouds", "description": "scattered clouds", "icon": "03d" }],
+                                "base": "stations",
+                                "main": { "temp": 29.5, "feels_like": 31.0, "temp_min": 28, "temp_max": 30, "pressure": 1009, "humidity": 75 },
+                                "visibility": 10000,
+                                "wind": { "speed": 5.0, "deg": 270 },
+                                "clouds": { "all": 40 },
+                                "dt": 1678886400,
+                                "sys": { "type": 2, "id": 2038740, "country": "IN", "sunrise": 1678857000, "sunset": 1678898000 },
+                                "timezone": 19800,
+                                "id": 1275339,
+                                "name": "Mumbai",
+                                "cod": 200
+                            };
+                        } else if (lowerCaseQuery.includes('delhi')) {
+                            simulatedData = {
+                                "coord": { "lon": 77.209, "lat": 28.6139 },
+                                "weather": [{ "id": 721, "main": "Haze", "description": "haze", "icon": "50d" }],
+                                "base": "stations",
+                                "main": { "temp": 35.0, "feels_like": 38.0, "temp_min": 33, "temp_max": 37, "pressure": 1005, "humidity": 40 },
+                                "visibility": 3000,
+                                "wind": { "speed": 2.5, "deg": 180 },
+                                "clouds": { "all": 0 },
+                                "dt": 1678886400,
+                                "sys": { "type": 2, "id": 2036729, "country": "IN", "sunrise": 1678857000, "sunset": 1678898000 },
+                                "timezone": 19800,
+                                "id": 1261481,
+                                "name": "Delhi",
+                                "cod": 200
+                            };
+                        } else if (lowerCaseQuery.includes('bengaluru') || lowerCaseQuery.includes('bangalore')) {
+                            simulatedData = {
+                                "coord": { "lon": 77.5946, "lat": 12.9716 },
+                                "weather": [{ "id": 803, "main": "Clouds", "description": "broken clouds", "icon": "04d" }],
+                                "base": "stations",
+                                "main": { "temp": 24.0, "feels_like": 25.0, "temp_min": 22, "temp_max": 26, "pressure": 1010, "humidity": 65 },
+                                "visibility": 10000,
+                                "wind": { "speed": 3.0, "deg": 250 },
+                                "clouds": { "all": 75 },
+                                "dt": 1678886400,
+                                "sys": { "type": 2, "id": 2012903, "country": "IN", "sunrise": 1678857000, "sunset": 1678898000 },
+                                "timezone": 19800,
+                                "id": 1277333,
+                                "name": "Bengaluru",
+                                "cod": 200
+                            };
+                        } else if (lowerCaseQuery.includes('kolkata')) {
+                            simulatedData = {
+                                "coord": { "lon": 88.3639, "lat": 22.5726 },
+                                "weather": [{ "id": 500, "main": "Rain", "description": "light rain", "icon": "10d" }],
+                                "base": "stations",
+                                "main": { "temp": 27.0, "feels_like": 29.0, "temp_min": 26, "temp_max": 28, "pressure": 1007, "humidity": 80 },
+                                "visibility": 9000,
+                                "wind": { "speed": 4.5, "deg": 100 },
+                                "clouds": { "all": 90 },
+                                "dt": 1678886400,
+                                "sys": { "type": 2, "id": 2026743, "country": "IN", "sunrise": 1678857000, "sunset": 1678898000 },
+                                "timezone": 19800,
+                                "id": 1275004,
+                                "name": "Kolkata",
+                                "cod": 200
+                            };
+                        } else if (lowerCaseQuery.includes('chennai')) {
+                            simulatedData = {
+                                "coord": { "lon": 80.2707, "lat": 13.0827 },
+                                "weather": [{ "id": 800, "main": "Clear", "description": "clear sky", "icon": "01d" }],
+                                "base": "stations",
+                                "main": { "temp": 32.0, "feels_like": 35.0, "temp_min": 30, "temp_max": 33, "pressure": 1008, "humidity": 60 },
+                                "visibility": 10000,
+                                "wind": { "speed": 6.0, "deg": 180 },
+                                "clouds": { "all": 0 },
+                                "dt": 1678886400,
+                                "sys": { "type": 2, "id": 2000001, "country": "IN", "sunrise": 1678857000, "sunset": 1678898000 },
+                                "timezone": 19800,
+                                "id": 1264527,
+                                "name": "Chennai",
+                                "cod": 200
+                            };
+                        } else if (lowerCaseQuery.includes('southampton')) {
+                            simulatedData = {
+                                "coord": { "lon": -1.3996, "lat": 50.9097 },
+                                "weather": [{ "id": 804, "main": "Clouds", "description": "overcast clouds", "icon": "04d" }],
+                                "base": "stations",
+                                "main": { "temp": 16.0, "feels_like": 15.5, "temp_min": 15, "temp_max": 17, "pressure": 1014, "humidity": 88 },
+                                "visibility": 10000,
+                                "wind": { "speed": 3.0, "deg": 270 },
+                                "clouds": { "all": 100 },
+                                "dt": 1678886400,
+                                "sys": { "type": 2, "id": 2038740, "country": "GB", "sunrise": 1678857000, "sunset": 1678898000 },
+                                "timezone": 0,
+                                "id": 2637684,
+                                "name": "Southampton",
+                                "cod": 200
+                            };
+                        }
+                    } else if (type === 'coords') {
+                        // Simulate data for current location, now set to Mumbai by default
+                         simulatedData = {
+                            "coord": { "lon": 72.8777, "lat": 19.076 },
+                            "weather": [{ "id": 802, "main": "Clouds", "description": "scattered clouds", "icon": "03d" }],
+                            "base": "stations",
+                            "main": { "temp": 28.5, "feels_like": 30.0, "temp_min": 27, "temp_max": 29, "pressure": 1009, "humidity": 70 },
+                            "visibility": 10000,
+                            "wind": { "speed": 5.5, "deg": 270 },
+                            "clouds": { "all": 40 },
+                            "dt": 1678886400,
+                            "sys": { "type": 2, "id": 2038740, "country": "IN", "sunrise": 1678857000, "sunset": 1678898000 },
+                            "timezone": 19800,
+                            "id": 1275339,
+                            "name": "Mumbai",
+                            "cod": 200
+                        };
+                    }
+
+                    if (simulatedData) {
+                        resolve(simulatedData);
+                    } else {
+                        // Default simulated data for unknown cities or if coords type doesn't match specific logic
+                        // This ensures there's always a fallback instead of an error for unrecognized inputs
+                        resolve({
+                            "coord": { "lon": 72.8777, "lat": 19.076 },
+                            "weather": [{ "id": 802, "main": "Clouds", "description": "scattered clouds", "icon": "03d" }],
+                            "base": "stations",
+                            "main": { "temp": 28.5, "feels_like": 30.0, "temp_min": 27, "temp_max": 29, "pressure": 1009, "humidity": 70 },
+                            "visibility": 10000,
+                            "wind": { "speed": 5.5, "deg": 270 },
+                            "clouds": { "all": 40 },
+                            "dt": 1678886400,
+                            "sys": { "type": 2, "id": 2038740, "country": "IN", "sunrise": 1678857000, "sunset": 1678898000 },
+                            "timezone": 19800,
+                            "id": 1275339,
+                            "name": "Mumbai", // Default to Mumbai for unhandled cities
+                            "cod": 200
+                        });
+                    }
+                }, 1000); // Simulate network delay
+
+                /*
+                // --- In a real application, you would use this structure: ---
+                const API_KEY = "YOUR_OPENWEATHERMAP_API_KEY"; // REPLACE WITH YOUR ACTUAL API KEY
+                const API_URL_BASE = "https://api.openweathermap.org/data/2.5/weather";
+                let url;
+                if (type === 'city') {
+                    url = `${API_URL_BASE}?q=${encodeURIComponent(query)}&units=metric&appid=${API_KEY}`;
+                } else if (type === 'coords') {
+                    const [lat, lon] = query.split(',');
+                    url = `${API_URL_BASE}?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`;
+                } else {
+                    displayError('Invalid query type.');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.message || 'Could not fetch weather data.');
+                    }
+                    const data = await response.json();
+                    resolve(data); // Resolve the promise with actual data
+                } catch (error) {
+                    console.error('Error fetching weather data:', error);
+                    displayError(`Failed to fetch weather data: ${error.message}. Please try again.`);
+                    reject(error); // Reject the promise to propagate the error
+                }
+                */
+            });
+        }
+
+        /**
+         * Fetches weather based on user input.
+         */
+        async function getWeatherByCity() {
+            const city = cityInput.value.trim();
+            if (city) {
+                try {
+                    const data = await fetchWeatherData(city, 'city');
+                    updateWeatherUI(data);
+                } catch (error) {
+                    // Error is already displayed by fetchWeatherData
+                }
+            } else {
+                showCustomModal('Input Required', 'Please enter a city name or postal code.');
+            }
+        }
+
+        /**
+         * Fetches weather for the user's current geolocation.
+         */
+        async function getWeatherByCurrentLocation() {
+            loadingIndicator.classList.remove('hidden');
+            weatherDisplay.classList.add('hidden');
+            hideError();
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(async (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    try {
+                        const data = await fetchWeatherData(`${lat},${lon}`, 'coords');
+                        updateWeatherUI(data);
+                    } catch (error) {
+                        // Error is already displayed by fetchWeatherData
+                    }
+                }, (error) => {
+                    loadingIndicator.classList.add('hidden');
+                    let errorMessageText = 'Unable to retrieve your location.';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessageText = 'Location access denied. Please enable location services in your browser settings to use this feature, or enter a city manually.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessageText = 'Location information is unavailable.';
+                            break;
+                        case error.TIMEOUT:
+                            errorMessageText = 'The request to get user location timed out.';
+                            break;
+                        case error.UNKNOWN_ERROR:
+                            errorMessageText = 'An unknown error occurred while getting location.';
+                            break;
+                    }
+                    displayError(errorMessageText);
+                    showCustomModal('Geolocation Error', errorMessageText);
+                    console.error('Geolocation error:', error);
+                });
+            } else {
+                loadingIndicator.classList.add('hidden');
+                displayError('Geolocation is not supported by your browser.');
+                showCustomModal('Browser Support', 'Geolocation is not supported by your browser.');
+            }
+        }
+
+        // Event Listeners
+        searchButton.addEventListener('click', getWeatherByCity);
+        cityInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                getWeatherByCity();
+            }
+        });
+        currentLocationButton.addEventListener('click', getWeatherByCurrentLocation);
+        toggleUnitsButton.addEventListener('click', () => {
+            isCelsius = !isCelsius; // Toggle the unit state
+            displayWeatherInCurrentUnits(); // Re-display weather with new units
+        });
+
+
+        // Initial fetch on page load for current location
+        window.onload = () => {
+            getWeatherByCurrentLocation();
+        };
+    </script>
+</body>
+</html>
